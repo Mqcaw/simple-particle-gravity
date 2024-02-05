@@ -12,21 +12,21 @@ class Particle;
 
 float const time_multiplier = 1;
 float const pi = 3.14159265358979323;
+float const half_pi = pi / 2;
 float const screenX = 1270;
 float const screenY = 800;
-const int numParticles = 1000;
+const int numParticles = 500;
 const float G = 1; //6.674e-5
-float const dt = time_multiplier * 0.0625f;//0.0625f 
 
 std::vector<Particle> particles;
 
 class Particle {
 public:
-    Particle(float x, float y, float m, bool f) {
+    Particle(float x, float y, float m, bool f, float v_x, float v_y) {
         position.x = x;
         position.y = y;
-        velocity.x = 0;
-        velocity.y = 0;
+        velocity.x = v_x;
+        velocity.y = v_y;
         acceleration.x = 0;
         acceleration.y = 0;
         mass = m;
@@ -37,7 +37,7 @@ public:
 
     }
 
-    void update() {
+    void update(float dt) {
         if (fixed == false) {
             velocity = velocity + (acceleration * dt);
             position = position + (velocity * dt);
@@ -73,25 +73,40 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(screenX, screenY), "Particle Gravity");
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
+    sf::Font font;
+    if (!font.loadFromFile("Consola.ttf")) {
+        // Replace "arial.ttf" with the path to a font file on your system
+        return EXIT_FAILURE;
+    }
+
     for (int i = 0; i < numParticles; i++) {
 
         float r = sqrt(static_cast<float>(rand()) / RAND_MAX);
 
-        r = r * r;
+        r = r * r * r;
 
         float a = static_cast<float>(std::rand()) / RAND_MAX * 2 * pi;
 
         float m = 300;
 
-        float x = r * cos(a) * m;
-        float y = -r * sin(a) * m;
+        float x = (r * cos(a) * m);
+        float y = (-r * sin(a) * m);
 
-        particles.emplace_back(1270 / 2 + x, 800 / 2 + y, 1, false);
+        float slope = y / x;
+        float angle = atan(-1 * (1 / slope)) + half_pi + (((-1 * y) / abs(y)) * half_pi) - (0.3 * pi);
+        float x_v = cos(angle);
+        float y_v = sin(angle);
+
+        particles.emplace_back((1270.0f / 2.0f) + x, (800.0f / 2.0f) + y, 1.0f, false, x_v, y_v);
     }
 
-    //particles.emplace_back(1270 / 2, 800 / 2, 1000, true);
 
 
+    sf::Clock clock;
+    float max_fps = 0;
+    int index = 0;
+    float fps = 0;
+    sf::Time last_time;
 
     // Game loop
     while (window.isOpen()) {
@@ -124,22 +139,40 @@ int main() {
             }
         }
 
-        //update postion of each particle
+        // Calculate frame rate
+        sf::Time elapsed = clock.restart();
+        float dt = elapsed.asSeconds() * time_multiplier;
+
+
         for (int i = 0; i < particles.size(); i++) {
-            particles[i].update();
+            particles[i].update(dt);
         }
 
-        sf::Text text;
-        text.setString("test"); // Set the text string
-        text.setCharacterSize(16); // Set the character size
-        text.setFillColor(sf::Color::White); // Set the fill color
-        text.setPosition(10.0f, 10.0f);
-        sf::Font font;
-        if (!font.loadFromFile("Consola.ttf")) {
-            // Replace "arial.ttf" with the path to a font file on your system
-            return EXIT_FAILURE;
+        
+        if (index % 100 == 0) {
+            fps = 1.0f / elapsed.asSeconds();
         }
-        text.setFont(font);
+        
+        if (fps > max_fps) {
+            max_fps = fps;
+        }
+
+
+        sf::Text fps_text;
+        fps_text.setString("Current: " + std::to_string(fps) + "FPS " + std::to_string(dt) + "dt"); // Set the text string
+        fps_text.setCharacterSize(16); // Set the character size
+        fps_text.setFillColor(sf::Color::White); // Set the fill color
+        fps_text.setPosition(10.0f, 10.0f);
+        fps_text.setFont(font);
+
+        sf::Text max_fps_text;
+        max_fps_text.setString("Max: " + std::to_string(static_cast<int>(max_fps)) + " FPS"); // Set the text string
+        max_fps_text.setCharacterSize(16); // Set the character size
+        max_fps_text.setFillColor(sf::Color::White); // Set the fill color
+        max_fps_text.setPosition(10.0f, 28.0f);
+        max_fps_text.setFont(font);
+
+
 
 
         window.clear();
@@ -148,14 +181,15 @@ int main() {
             particle.draw(window);
         }
 
-        window.draw(text);
+        window.draw(fps_text);
+        window.draw(max_fps_text);
 
 
         window.display();
 
 
 
-
+        index++;
 
 
 
