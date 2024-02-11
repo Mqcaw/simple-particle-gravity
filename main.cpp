@@ -20,6 +20,8 @@ const float G = 1; //6.674e-5
 
 std::vector<Particle> particles;
 
+//final commit for now, may optimize and clean code later, but idk
+
 class Particle {
 public:
     Particle(float x, float y, float m, bool f, float v_x, float v_y) {
