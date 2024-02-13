@@ -16,7 +16,7 @@ float const half_pi = pi / 2;
 float const screenX = 1270;
 float const screenY = 800;
 const int numParticles = 500;
-const float G = 1; //6.674e-5
+const int max_calc_dist = 200; //px
 
 std::vector<Particle> particles;
 
@@ -68,19 +68,7 @@ public:
 
 
 
-
-
-
-int main() {
-    sf::RenderWindow window(sf::VideoMode(screenX, screenY), "Particle Gravity");
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
-
-    sf::Font font;
-    if (!font.loadFromFile("Consola.ttf")) {
-        // Replace "arial.ttf" with the path to a font file on your system
-        return EXIT_FAILURE;
-    }
-
+int init_particles() {
     for (int i = 0; i < numParticles; i++) {
 
         float r = sqrt(static_cast<float>(rand()) / RAND_MAX);
@@ -101,6 +89,35 @@ int main() {
 
         particles.emplace_back((1270.0f / 2.0f) + x, (800.0f / 2.0f) + y, 1.0f, false, x_v, y_v);
     }
+    return 0;
+}
+
+float inv_square(float n) { //thank you Quake III
+   
+   const float threehalfs = 1.5f;
+   float y = n;
+   
+   long i = * ( long * ) &y;
+
+   i = 0x5f3759df - ( i >> 1 );
+   y = * ( float * ) &i;
+   
+   y = y * ( threehalfs - ( (n * 0.5F) * y * y ) );
+   
+   return y;
+}
+
+int main() {
+    sf::RenderWindow window(sf::VideoMode(screenX, screenY), "Particle Gravity");
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+    sf::Font font;
+    if (!font.loadFromFile("Consola.ttf")) {
+        // Replace "arial.ttf" with the path to a font file on your system
+        return EXIT_FAILURE;
+    }
+
+    init_particles();
 
 
 
@@ -128,12 +145,14 @@ int main() {
                 }
                 sf::Vector2f r = particles[j].position - particles[i].position;
 
-
                 if (abs(r.x) > 0 && abs(r.y) > 0) {
-                    float mag_sq = r.x * r.x + r.y * r.y;
-                    float mag = sqrt(mag_sq);
+                    float d_0 = (r.x * r.x + r.y * r.y);
+                    if (d_0 > (max_calc_dist * max_calc_dist)) {
+                        continue;
+                    }
+                    float d_1 = inv_square(d_0);
 
-                    sf::Vector2f accel = (particles[j].mass / (mag_sq * mag)) * r;
+                    sf::Vector2f accel = (d_1 * inv_square(d_0 * d_0)) * r;
 
                     particles[i].acceleration += accel;
                     particles[j].acceleration += -accel;
@@ -161,7 +180,7 @@ int main() {
 
 
         sf::Text fps_text;
-        fps_text.setString("Current: " + std::to_string(fps) + "FPS " + std::to_string(dt) + "dt"); // Set the text string
+        fps_text.setString("Current: " + std::to_string(fps) + " FPS " + std::to_string(dt) + "dt"); // Set the text string
         fps_text.setCharacterSize(16); // Set the character size
         fps_text.setFillColor(sf::Color::White); // Set the fill color
         fps_text.setPosition(10.0f, 10.0f);
