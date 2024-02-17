@@ -8,63 +8,22 @@
 #include <chrono>
 
 
-class Particle;
-
 float const time_multiplier = 1;
 float const pi = 3.14159265358979323;
 float const half_pi = pi / 2;
 float const screenX = 1270;
 float const screenY = 800;
-const int numParticles = 500;
-const int max_calc_dist = 200; //px
+int const numParticles = 1000;
+int const max_calc_dist = 2000; //px
 
-std::vector<Particle> particles;
 
-//final commit for now, may optimize and clean code later, but idk
-
-class Particle {
-public:
-    Particle(float x, float y, float m, bool f, float v_x, float v_y) {
-        position.x = x;
-        position.y = y;
-        velocity.x = v_x;
-        velocity.y = v_y;
-        acceleration.x = 0;
-        acceleration.y = 0;
-        mass = m;
-        fixed = f;
-
-        shape.setRadius(1.0f);
-        shape.setPosition(position);
-
-    }
-
-    void update(float dt) {
-        if (fixed == false) {
-            velocity = velocity + (acceleration * dt);
-            position = position + (velocity * dt);
-
-            shape.setPosition(position);
-        }
-        
-
-        acceleration = sf::Vector2f(0, 0);
-    }
-
-    void draw(sf::RenderWindow& window) const {
-        window.draw(shape);
-    }
-
-public:
-    sf::Vector2f position;
-    sf::Vector2f acceleration;
-    sf::Vector2f velocity;
-    sf::CircleShape shape;
-    bool fixed;
-    float mass;
-    
-    
-};
+sf::CircleShape shape_list[numParticles];
+float acceleration_list_x[numParticles];
+float acceleration_list_y[numParticles];
+float velocity_list_x[numParticles];
+float velocity_list_y[numParticles];
+float position_list_x[numParticles];
+float position_list_y[numParticles];
 
 
 
@@ -80,14 +39,40 @@ int init_particles() {
         float m = 300;
 
         float x = (r * cos(a) * m);
-        float y = (-r * sin(a) * m);
+        float y = (r * -sin(a) * m);
 
-        float slope = y / x;
-        float angle = atan(-1 * (1 / slope)) + half_pi + (((-1 * y) / abs(y)) * half_pi) - (0.3 * pi);
-        float x_v = cos(angle);
-        float y_v = sin(angle);
 
-        particles.emplace_back((1270.0f / 2.0f) + x, (800.0f / 2.0f) + y, 1.0f, false, x_v, y_v);
+        position_list_x[i] = (1270.0f / 2.0f) + x;
+        position_list_y[i] = (800.0f / 2.0f) + y;
+
+        shape_list[i] = sf::CircleShape(1.0f, 4);
+        shape_list[i].setRadius(1.0f);
+        shape_list[i].setPosition(position_list_x[i], position_list_y[i]);
+    
+
+    }
+    return 0;
+}
+
+int update_particles(float dt) {
+    for (int i = 0; i < numParticles; i++) {
+        velocity_list_x[i] = velocity_list_x[i] + (acceleration_list_x[i] * dt);
+        velocity_list_y[i] = velocity_list_y[i] + (acceleration_list_y[i] * dt);
+
+        position_list_x[i] = position_list_x[i] + (velocity_list_x[i] * dt);
+        position_list_y[i] = position_list_y[i] + (velocity_list_y[i] * dt);
+
+        shape_list[i].setPosition(position_list_x[i], position_list_y[i]);
+
+        acceleration_list_x[i] = 0.0f;
+        acceleration_list_y[i] = 0.0f;       
+    }
+    return 0;
+}
+
+int draw_particles(sf::RenderWindow& window) {
+    for (int i = 0; i < numParticles; i++) {
+        window.draw(shape_list[i]);
     }
     return 0;
 }
@@ -113,8 +98,7 @@ int main() {
 
     sf::Font font;
     if (!font.loadFromFile("Consola.ttf")) {
-        // Replace "arial.ttf" with the path to a font file on your system
-        return EXIT_FAILURE;
+        return -1;
     }
 
     init_particles();
@@ -138,24 +122,32 @@ int main() {
 
 
         // Calculate and update acceleration for each particle
-        for (int i = 0; i < particles.size(); i++) {
-            for (int j = i; j < particles.size(); j++) {
+        for (int i = 0; i < numParticles; i++) {
+            for (int j = i; j < numParticles; j++) {
                 if (i == j) {
                     continue;
                 }
-                sf::Vector2f r = particles[j].position - particles[i].position;
 
-                if (abs(r.x) > 0 && abs(r.y) > 0) {
-                    float d_0 = (r.x * r.x + r.y * r.y);
+                float r_x = position_list_x[j] - position_list_x[i];
+                float r_y = position_list_y[j] - position_list_y[i];
+
+
+                if (abs(r_x) > 0 && abs(r_y) > 0) {
+                    float d_0 = (r_x * r_x + r_y * r_y);
                     if (d_0 > (max_calc_dist * max_calc_dist)) {
                         continue;
                     }
                     float d_1 = inv_square(d_0);
 
-                    sf::Vector2f accel = (d_1 * inv_square(d_0 * d_0)) * r;
+                    float accel_x = (d_1 * inv_square(d_0 * d_0)) * r_x;
+                    float accel_y = (d_1 * inv_square(d_0 * d_0)) * r_y;
 
-                    particles[i].acceleration += accel;
-                    particles[j].acceleration += -accel;
+
+                    acceleration_list_x[i] += accel_x;
+                    acceleration_list_y[i] += accel_y;
+
+                    acceleration_list_x[j] += -accel_x;
+                    acceleration_list_y[j] += -accel_y;;
                 }
             }
         }
@@ -165,8 +157,8 @@ int main() {
         float dt = elapsed.asSeconds() * time_multiplier;
 
 
-        for (int i = 0; i < particles.size(); i++) {
-            particles[i].update(dt);
+        for (int i = 0; i < numParticles; i++) {
+            update_particles(dt);
         }
 
         
@@ -198,9 +190,7 @@ int main() {
 
         window.clear();
 
-        for (const auto& particle : particles) {
-            particle.draw(window);
-        }
+        draw_particles(window);
 
         window.draw(fps_text);
         window.draw(max_fps_text);
