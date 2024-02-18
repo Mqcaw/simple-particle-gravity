@@ -13,11 +13,12 @@ float const pi = 3.14159265358979323;
 float const half_pi = pi / 2;
 float const screenX = 1270;
 float const screenY = 800;
-int const numParticles = 1000;
+int const numParticles = 500;
 int const max_calc_dist = 2000; //px
 
 
 sf::CircleShape shape_list[numParticles];
+
 float acceleration_list_x[numParticles];
 float acceleration_list_y[numParticles];
 float velocity_list_x[numParticles];
@@ -32,7 +33,7 @@ int init_particles() {
 
         float r = sqrt(static_cast<float>(rand()) / RAND_MAX);
 
-        r = r * r * r;
+        r = r * r * r * r;
 
         float a = static_cast<float>(std::rand()) / RAND_MAX * 2 * pi;
 
@@ -147,7 +148,10 @@ int main() {
                     acceleration_list_y[i] += accel_y;
 
                     acceleration_list_x[j] += -accel_x;
-                    acceleration_list_y[j] += -accel_y;;
+                    acceleration_list_y[j] += -accel_y;
+
+
+
                 }
             }
         }
